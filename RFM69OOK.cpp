@@ -41,7 +41,7 @@ This library makes reference to RFM69(H)W_OOK_Library_Vx.y.pdf
 * Notes:        1. 	This library is currently limited to OOK TRANSMISSION using a RFM69(H)W transceivers
 *					(RFM69(H)CW and OOK RECEPTION are not scoped)
 *				2.	Functions are limited to a set of well known OOK protocols aka KAKU protocols
-*					(Klik aan Klik uit) mores specifically to KAKU OLD, KAKU NEW and KAKU GOGEX
+*					(Klik aan Klik uit) more specifically to KAKU OLD, KAKU NEW and KAKU GOGEX
 *					(see https://github.com/rrobinet/SAW_Devices_and_OOK/blob/master/OOK_Protocols_decription_V0.0.pdf)
 * 				3.  This is a companion of the RFM69 library, by adding OOK modulation functions 
 *        		4.  OOK modulation is obtained by offering data to the DIO2 pin of the RFM69 transceiver. 
@@ -64,17 +64,19 @@ This library makes reference to RFM69(H)W_OOK_Library_Vx.y.pdf
 *					- Number of repeated datagrams is 10
 *					These default parameters may be changed on a case by case basis  (see setOokPin and setOokParams)
 *				7.	The functions are tested with the following devices
-*		  				- CHACON Handset       					Type: LYCT-505 (New Kaku)
+*		  				- CHACON Remote command Handset       	Type: LYCT-505 (New Kaku)
 *						- CHACON Wireless Timer Control Handset	Type: TMT-502 (Old Kaku)
 *						- CHACON Remote switch 					Type: LYCR-3500 (non-dimmable)
 *						- CHACON Remote switch 					Type: LYCR-300 (dimmable)
+*		  				- COGEX Remote command Handset       	Type: 91789 
 *						- COGEX Remote switch 					Type: 91219B (non-dimmable)
-*				8.	The functions are made to clone (replay) command to configured devices, it is therefore important 	
-*					the know before using these functions to know:	
+*				8.	The function where ONLY tested using 433MHz RFM69(H)W transceivers
+*				9.	The functions are made to clone (replay) commands to configured devices, it is therefore important 	
+*					the know before using these functions:	
 *						- One House address of one handset (New or Old) Ex: New: 1332798 or Old: D or Cogex:  12 
 *						- The Unit address of each device to manage
-*						- The The dimmable capability of the unit					 
-*                   The not so easy partr is to find the House address, if not mentioned on the handset we refer to a
+*						- The dimmable capability of the unit					 
+*                   The not so easy part is to find the House address, if not mentioned on the handset we refer to a
 *					decoding session using RX433 receiver 
 *					see:
 *						https://github.com/rrobinet/SAW_Devices_and_OOK/blob/master/OOK_Poor_man's_monitoring_tool_V0.0.pdf
@@ -82,16 +84,14 @@ This library makes reference to RFM69(H)W_OOK_Library_Vx.y.pdf
 /***********************************************************************************************************************/
 #include "RFM69OOK.h"
 
-#define RFM69OOK_DEBUG 0			// Debugging option
-
 /****************************************************** RFM69OOK *******************************************************
 * Function:  	Define a RFM69OOK Class with default parameters
 * Parameters:	None
 /***********************************************************************************************************************/
 RFM69OOK::RFM69OOK ()		    	  
 {
-	_ookDataPin=RF69_OOK_PIN;		// Arduino OOK data pin according to the processor type
-   	_periodusec=300;				// Average OOK pulse time for OOK SAW devices is 300 us
+	_ookDataPin=RF69_OOK_PIN;		// Processor OOK data pin according to the processor type
+   	_periodusec=300;				// Processor OOK pulse time for OOK SAW devices is 300 us
    	_repeats=10;					// Number of time the OOK datagram is repeated is by default 10
    	_repDly=20;						// Default delay between datagrams is 20 ms
    	pinMode(_ookDataPin, OUTPUT);	// Set OOK pin to output
@@ -151,7 +151,7 @@ void RFM69OOK::setOokPin(uint8_t newOokDataPin)
 *              	Remote switch group command option
 *              	Remote switch dim level
 /***********************************************************************************************************************/
-void RFM69OOK::sendKakuNew(RFM69 &radio, unsigned long int addr, unsigned long int unit, boolean on, boolean group, byte dimLevel)
+void RFM69OOK::sendKakuNew(RFM69 &radio, unsigned long int addr, byte unit, boolean on, boolean group, byte dimLevel)
 {
 	volatile int mode = radio.readReg(REG_OPMODE);			// Record the previous Operation mode
    	volatile int modulation = radio.readReg(REG_DATAMODUL); // Record the previous Modulation Mode
@@ -169,20 +169,8 @@ void RFM69OOK::sendKakuNew(RFM69 &radio, unsigned long int addr, unsigned long i
     unsigned long int cmd = 0 | addr << 6 | unit;  		// Build the command datagram with the address and unit info
     if (on) cmd |= 0x10;            		      		// Set the Level bit to ON in the command datagram
     else  dimLevel = 0;                 				// Avoid DIM to be active while setting the level to OFF
-    if(RFM69OOK_DEBUG)									// Print info for debugging
-    {
-    	Serial.print ("Using Handset: "), Serial.print(addr),  Serial.print (" Set Logical Unit: "),
-        Serial.print (unit & 0x0F), Serial.print (" to: "), Serial.print(on), 
-        Serial.print(" Group: "), Serial.println (group); 
-        Serial.print("Data pin: "), Serial.print (_ookDataPin); Serial.print ("; Period: " ), 
-        Serial.print( _periodusec), Serial.print ("; Repeated: "), Serial.print (_repeats), Serial.print ("; Delay: "),
-        Serial.println (_repDly);
-        if (dimLevel)
-        {
-        	Serial.print(" with DIM level: "), Serial.println (dimLevel);
-        }
-        else Serial.println();
-	}
+    if(RFM69OOK_DEBUG) printOokInfos(addr, unit, on, group, dimLevel,cmd);	// Print info for debugging
+
   	for (int i = 0; i< _repeats; i++)					// Output the data to the RFM69
   	{
     	ookNewKakuRfmPulse(0, _periodusec*10);        	// Send Start  bit
@@ -265,15 +253,7 @@ void RFM69OOK::ookNewKakuRfmPulse(int l1, int l2)
    	*/
  	int cmd = 0 | 0x600 | ((unit - 1) << 4) | (addr - 65);
   	if (on) cmd |= 0x800; 
-  	 if(RFM69OOK_DEBUG)												// Print info for debugging
-    {
-    	Serial.print ("House Code: "), Serial.print(addr),  Serial.print (" Set Logical Unit: "),
-        Serial.print (unit -1), Serial.print (" to: "), Serial.println(on), 
-        Serial.print("Data pin: "), Serial.print (_ookDataPin); Serial.print ("; Period: " ), 
-        Serial.print( _periodusec), Serial.print ("; Repeated: "), Serial.print (_repeats), Serial.print ("; Delay: "), 
-        Serial.println (_repDly);
- 	    Serial.print ("Command message: "), Serial.println (cmd,BIN), Serial.println();
-    }
+  	if(RFM69OOK_DEBUG)	printOokInfos(addr, unit-1, on, 0, 0,cmd);	// Print info for debugging  
   	for(int i = 0; i< _repeats; i++)
   	{
     	ookOldKakuRfmPulse(0, _periodusec*3);						// Start bit
@@ -330,15 +310,7 @@ void RFM69OOK::ookOldKakuRfmPulse(int on, int off)
     */ 
    int cmd = 0 | 0x600 | unit << 5 | addr << 1;
    if (on) cmd |= 0x801;
-   if(RFM69OOK_DEBUG)												// Print info for debugging
-   {
-    	Serial.print ("House Code: "), Serial.print(addr),  Serial.print (" Set Logical Unit: "),
-        Serial.print (unit -1), Serial.print (" to: "), Serial.println(on), 
-        Serial.print("Data pin: "), Serial.print (_ookDataPin); Serial.print ("; Period: " ), 
-        Serial.print( _periodusec), Serial.print ("; Repeated: "), Serial.print (_repeats), Serial.print ("; Delay: "),
-        Serial.println (_repDly);
- 	    Serial.print ("Command message: "), Serial.println (cmd,BIN), Serial.println ();
-   }
+   if(RFM69OOK_DEBUG) printOokInfos(addr, unit, on, 0, 0,cmd); 		// Print Debug infos
    for(int i = 0; i< _repeats; i++)
    {
      ookCogexRfmPulse(0,_periodusec*3);                               // Start bit 
@@ -370,6 +342,25 @@ void RFM69OOK::ookOldKakuRfmPulse(int on, int off)
 }
 /***********************************************************************************************************************/
 
-
+/*************************************************** printOokInfos *****************************************************
+* Function:  	Debugging information
+* Parameters: 	None
+/***********************************************************************************************************************/
+ void RFM69OOK::printOokInfos (unsigned long int addr, unsigned long int unit, boolean on, boolean group, byte dimLevel,int cmd)
+{
+    	Serial.print ("RF69OOK version: "), Serial.print(MAJOR), Serial.print("."), Serial.println (MINOR);
+    	Serial.print ("House Code: ");
+    	if (addr > 64 & addr <81) Serial.print((char) addr);		// Convert address to ASCII for old Kaku address 
+    	else Serial.print(addr);
+    	Serial.print (" Set Logical Unit: "),
+        Serial.print (unit), Serial.print (" to: "), Serial.println(on); 
+        if(group) Serial.print("Group: "), Serial.print(group);
+        if(dimLevel) Serial.print(" DIM level: "), Serial.println (dimLevel);
+        Serial.print("Data pin: "), Serial.print (_ookDataPin); Serial.print ("; Period: " ), 
+        Serial.print( _periodusec), Serial.print ("; Repeated: "), Serial.print (_repeats), Serial.print ("; Delay: "),
+        Serial.println (_repDly);
+ 	    Serial.print ("Command datagram: "), Serial.println (cmd,BIN), Serial.println ();
+}
+/***********************************************************************************************************************/
 
 

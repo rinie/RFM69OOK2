@@ -18,13 +18,16 @@ Free Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1
 This library makes reference to RFM69(H)W_OOK_Library_Vx.y.pdf
 /***********************************************************************************************************************/
 
-#ifndef RFM69OOK__h
+#ifndef RFM69OOK_h
 #define RFM69OOK_h
 
 #include "RFM69.h"
 #include "RFM69registers.h"
 #include <Arduino.h>
 
+extern boolean RFM69OOK_DEBUG; 		// Debug option defined by the 
+#define MAJOR 1						// Major version
+#define MINOR 0						// Minor version
 
 
 // RFM69 DIO2 pin should be connected on ATmega328 pin D3
@@ -48,30 +51,30 @@ class RFM69OOK {
 public: 
     // Define a RFM69OOK Class with default parameters
     RFM69OOK();                      		
-    // Define a RFM69OOK Class with individual parame
+    // Define a RFM69OOK Class with individual parameters
     RFM69OOK (byte _ookDataPin, unsigned int periodusec, byte repeats, byte repDly);
     // Modify the OOK Data output pin
     void setOokPin(uint8_t newOokDataPin);
-    // Modify the OOK transmitter timing parametres
+    // Modify the OOK transmitter timing parameters
     void setOokParams(unsigned int periodusec, byte repeats, byte repDly);
     // Send OOK Kaku datagram using the New protocol
-    void sendKakuNew(RFM69 &radio, unsigned long int addr, unsigned long int unit, boolean on, boolean group, byte dimLevel);
+    void sendKakuNew(RFM69 &radio, unsigned long int addr, byte unit, boolean on, boolean group, byte dimLevel);
     // Send OOK Kaku datagram using the Old protocol
     void sendKakuOld(RFM69 &radio, char addr, byte unit, byte on);
     // Send OOK Kaku datagram using the Cogex protocol
-    void sendKakuCogex(RFM69 &radio, byte addr, byte unit, byte on);
-    
+    void sendKakuCogex(RFM69 &radio, byte addr, byte unit, byte on);   
 private:
     byte _ookDataPin;						// ATMEGA328 - RFM69 OOK Data port
 	byte _repeats;							// Number of time a datagram is to be repeated
 	byte _repDly;							// Delay between repeated datagrams
-	unsigned int _periodusec;				// OOK pulse time for OOK SAW devices
-	
+	unsigned int _periodusec;				// OOK pulse time for OOK SAW devices	
 	// New Kaku datagram output to RFM69 
     void ookNewKakuRfmPulse(int l1, int l2);
    	// Old Kaku datagram output to RFM69 
     void ookOldKakuRfmPulse(int on, int off);
     // Cogex Kaku datagram output to RFM69 
     void ookCogexRfmPulse(int on, int off);
+    // Print OOK settings informations
+	void printOokInfos (unsigned long int addr, unsigned long int unit, boolean on, boolean group, byte dimLevel, int cmd);
 };
 #endif
