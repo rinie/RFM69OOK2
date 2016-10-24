@@ -22,8 +22,8 @@ This library makes reference to RFM69(H)W_OOK_Library_Vx.y.pdf
 *                                                      DESCRIPTION                                                      *
 *                                                                                                                       *
 /************************************************************************************************************************
-* Version:      1.0
-* Date:         21/06/2015
+* Version:      1.2
+* Date:         21/10/2016
 * Author:       Robert 
 * Description:  Library for OOK Kaku alike transmission using RFM69 transceivers
 * Compiler:     - Arduino Compiler 1.65
@@ -35,6 +35,7 @@ This library makes reference to RFM69(H)W_OOK_Library_Vx.y.pdf
 *               - Arduino Ethernet R3 + RFM69(H)W Board
 *               - Arduino ATMEGA2560 + RFM69(H)W Shield
 *               - Arduino ATMEGA2560 + Ethernet Shield RFM69(H)W Shield
+*				- ESP8266 
 * Software:     Tested with RFM69 Library version 9 May 2015 (see https://github.com/LowPowerLab/RFM69)
 * Documentation:
 				RFM69(H)W_OOK_Library_Vx.y.pdf (see https://github.com/rrobinet/RFM69OOK )
@@ -52,13 +53,14 @@ This library makes reference to RFM69(H)W_OOK_Library_Vx.y.pdf
 *					the RFM69 FSK settings for OOK modulation, settings are restored after the function is terminated 
 *				6.	Default parameters are:
 *					- RFM69 DI02 connected to:
-*												- Moteino R4		Pin 3
-*												- MiniWireless69	Pin 3
-*												- Moteino Mega		Pin 11 
-*												- Arduino Uno		Pin 3 	using the RFM69(H)W Board
-*												- Arduino Ethernet 	Pin 3 	using the RFM69(H)W Board
-*												- Arduino Leonardo	Pin 2	using the RFM69(H)W Board
-*												- ATMEGA 2560		Pin 19	using the RFM69(H)W Shield
+*												- Moteino R4					Pin 3
+*												- MiniWireless69				Pin 3
+*												- Moteino Mega					Pin 11 
+*												- Arduino Uno					Pin 3 	using the RFM69(H)W Board
+*												- Arduino Ethernet 				Pin 3 	using the RFM69(H)W Board
+*												- Arduino Leonardo				Pin 2	using the RFM69(H)W Board
+*												- ATMEGA 2560					Pin 18	using the RFM69(H)W Shield
+*												- Expressive ESP8266 (ESP-12)	Pin 16	using the RFM69(H)W Board		
 *					- OOK Symbol time is 300 us (good compromise between Kaku New, Old and Gogex)
 *					- Datagram Repeat delay is 20ms (looks to be an acceptable value for Gogex)
 *					- Number of repeated datagrams is 10
@@ -82,6 +84,12 @@ This library makes reference to RFM69(H)W_OOK_Library_Vx.y.pdf
 *						https://github.com/rrobinet/SAW_Devices_and_OOK/blob/master/OOK_Poor_man's_monitoring_tool_V0.0.pdf
 *						https://bitbucket.org/fuzzillogic/433mhzforarduino/wiki/Home)
 /***********************************************************************************************************************/
+/**************************************** Revision History **************************************************************
+* 1.0 - First release
+* 1.1 - Correct ATMEGA2560 DIO2 pin from 19 to 18
+* 1.2 - Correction is made to the ookOldKakuRfmPulse and ookCogexRfmPulse function to cope with no 0 integer 
+*	    value calcutation chrsahing the ESP8266
+************************************************************************************************************************/
 #include "RFM69OOK.h"
 
 /****************************************************** RFM69OOK *******************************************************
@@ -274,8 +282,10 @@ void RFM69OOK::ookNewKakuRfmPulse(int l1, int l2)
 void RFM69OOK::ookOldKakuRfmPulse(int on, int off)
 {
  	int corrFactor = 150;                 							// Instruction delay correction factor
-  	if(on !=0) digitalWrite(_ookDataPin,HIGH);  					// Skip the transition for the Start bit
-  	delayMicroseconds (on-corrFactor); 								//Adjusted for processing delay                
+  if(on !=0) {
+  	digitalWrite(_ookDataPin,HIGH);  		    // Skip the transition for the Start bit
+    delayMicroseconds (on-corrFactor);			// Adjusted for processing delay   
+  }              
   	digitalWrite(_ookDataPin,LOW);
   	delayMicroseconds (off+corrFactor);       						// Adjusted for processing delay      
   	digitalWrite(_ookDataPin,HIGH);              					// Common part of any bit (1,3)
@@ -331,9 +341,11 @@ void RFM69OOK::ookOldKakuRfmPulse(int on, int off)
  void RFM69OOK::ookCogexRfmPulse(int on, int off)
 {
   int corrFactor = 150;                 			// Instruction delay correction factor
-  if(on !=0) digitalWrite(_ookDataPin,HIGH);  		// Skip the transition for the Start bit
-  delayMicroseconds (on-corrFactor); 				//Adjusted for processing delay                
-  digitalWrite(_ookDataPin,LOW);
+  if(on !=0) {
+  	digitalWrite(_ookDataPin,HIGH);  		    // Skip the transition for the Start bit
+    delayMicroseconds (on-corrFactor);			// Adjusted for processing delay   
+  }              
+  digitalWrite(_ookDataPin,LOW);  
   delayMicroseconds (off+corrFactor);       		// Adjusted for processing delay      
   digitalWrite(_ookDataPin,HIGH);              		// Common part of any bit (1,3)
   delayMicroseconds ((_periodusec)-corrFactor);                       

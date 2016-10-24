@@ -27,18 +27,22 @@ This library makes reference to RFM69(H)W_OOK_Library_Vx.y.pdf
 
 extern boolean RFM69OOK_DEBUG; 		// Debug option defined by the 
 #define MAJOR 1						// Major version
-#define MINOR 0						// Minor version
-
-
+#define MINOR 2						// Minor version
+/**************************************** Revision History **************************************************************
+* 1.0 - First release
+* 1.1 - Correct ATMEGA2560 DIO2 pin from 19 to 18
+* 1.2 - Correction is made to the ookOldKakuRfmPulse and ookCogexRfmPulse function to cope with no 0 integer 
+*	    value calcutation chrsahing the ESP8266
+************************************************************************************************************************/
 // RFM69 DIO2 pin should be connected on ATmega328 pin D3
 #if defined(__AVR_ATmega328P__) 
 	#define RF69_OOK_PIN          3
 // RFM69 DIO2 pin should be connected on ATmega1284P pin D11
 #elif defined(__AVR_ATmega1284P__)
 	#define RF69_OOK_PIN          11
-// RFM69 DIO2 pin should be connected on ATmega2560 pin D19 using RFM69 Shield
+// RFM69 DIO2 pin should be connected on ATmega2560 pin D18 using RFM69 Shield
 #elif defined(__AVR_ATmega2560__)
-	#define RF69_OOK_PIN          19
+	#define RF69_OOK_PIN          18
 // RFM69 DIO2 pin should be connected on ATmega32U4 pin D2	 
 #elif defined(__AVR_ATmega32U4__)
 	#define RF69_OOK_PIN          2
