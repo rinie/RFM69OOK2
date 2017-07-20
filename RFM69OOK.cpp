@@ -22,8 +22,8 @@ This library makes reference to RFM69(H)W_OOK_Library_Vx.y.pdf
 *                                                      DESCRIPTION                                                      *
 *                                                                                                                       *
 /************************************************************************************************************************
-* Version:      1.2
-* Date:         21/10/2016
+* Version:      1.3
+* Date:         16/11/2016
 * Author:       Robert 
 * Description:  Library for OOK Kaku alike transmission using RFM69 transceivers
 * Compiler:     - Arduino Compiler 1.65
@@ -88,7 +88,8 @@ This library makes reference to RFM69(H)W_OOK_Library_Vx.y.pdf
 * 1.0 - First release
 * 1.1 - Correct ATMEGA2560 DIO2 pin from 19 to 18
 * 1.2 - Correction is made to the ookOldKakuRfmPulse and ookCogexRfmPulse function to cope with no 0 integer 
-*	    value calcutation chrsahing the ESP8266
+*	    value calcutation crash with the ESP8266
+* 1.3 - Save and restore of Bit rate MSB and LSB register while calling a OOK function 
 ************************************************************************************************************************/
 #include "RFM69OOK.h"
 
@@ -163,6 +164,8 @@ void RFM69OOK::sendKakuNew(RFM69 &radio, unsigned long int addr, byte unit, bool
 {
 	volatile int mode = radio.readReg(REG_OPMODE);			// Record the previous Operation mode
    	volatile int modulation = radio.readReg(REG_DATAMODUL); // Record the previous Modulation Mode
+   	volatile int bitRateMsb = radio.readReg(REG_BITRATEMSB);// Record the previous value of the BitRate MSB
+   	volatile int bitRateLsb = radio.readReg(REG_BITRATELSB);// Record the previous value of the BitRate LSB
    	// Set Modulation to OOK continuous mode without synchronisation
    	radio.writeReg(REG_DATAMODUL, RF_DATAMODUL_DATAMODE_CONTINUOUSNOBSYNC|RF_DATAMODUL_MODULATIONTYPE_OOK);	
    	// Set the Operation mode to transmit
@@ -212,8 +215,10 @@ void RFM69OOK::sendKakuNew(RFM69 &radio, unsigned long int addr, byte unit, bool
      ookNewKakuRfmPulse(0, _periodusec*10);           	// Stop bit
      delay (_repDly);                                 	// Wait some delay between reties 
 	}  
-   	radio.writeReg(REG_OPMODE,mode);                    // Restore previous OPMODE
-  	radio.writeReg(REG_DATAMODUL,modulation);           // Restore pervious MODULATION                                                                 
+   	radio.writeReg(REG_OPMODE,mode);                    			// Restore previous OPMODE
+  	radio.writeReg(REG_DATAMODUL,modulation);           			// Restore previous MODULATION    
+  	radio.writeReg(REG_BITRATEMSB, bitRateMsb);			            // Restore previous BIT RATE value
+  	radio.writeReg(REG_BITRATELSB, bitRateLsb);			            // Restore previous BIT RATE value                                                                
 }
  
 /*************************************************** ookNewKakuRfmPulse ************************************************
@@ -249,6 +254,8 @@ void RFM69OOK::ookNewKakuRfmPulse(int l1, int l2)
  {
 	volatile int mode = radio.readReg(REG_OPMODE);			// Record the previous Operation mode
    	volatile int modulation = radio.readReg(REG_DATAMODUL); // Record the previous Modulation Mode
+   	volatile int bitRateMsb = radio.readReg(REG_BITRATEMSB);// Record the previous value of the BitRate MSB
+   	volatile int bitRateLsb = radio.readReg(REG_BITRATELSB);// Record the previous value of the BitRate LSB
    	// Set Modulation to OOK continuous mode without synchronisation
    	radio.writeReg(REG_DATAMODUL, RF_DATAMODUL_DATAMODE_CONTINUOUSNOBSYNC|RF_DATAMODUL_MODULATIONTYPE_OOK);	
    	// Set the Operation mode to transmit
@@ -273,7 +280,10 @@ void RFM69OOK::ookNewKakuRfmPulse(int l1, int l2)
   	delay (_repDly);
   } 
    	radio.writeReg(REG_OPMODE,mode);                    			// Restore previous OPMODE
-  	radio.writeReg(REG_DATAMODUL,modulation);           			// Restore pervous MODULATION                                                                 
+  	radio.writeReg(REG_DATAMODUL,modulation);           			// Restore previous MODULATION    
+  	radio.writeReg(REG_BITRATEMSB, bitRateMsb);			            // Restore previous BIT RATE value
+  	radio.writeReg(REG_BITRATELSB, bitRateLsb);			            // Restore previous BIT RATE value
+  	                                                               
 }
 /************************************************ ookOldKakuRfmPulse ***************************************************
 * Function:  	KAKU Old pulse switching function with RFM69
@@ -307,6 +317,8 @@ void RFM69OOK::ookOldKakuRfmPulse(int on, int off)
  {
 	volatile int mode = radio.readReg(REG_OPMODE);			// Record the previous Operation mode
    	volatile int modulation = radio.readReg(REG_DATAMODUL); // Record the previous Modulation Mode
+   	volatile int bitRateMsb = radio.readReg(REG_BITRATEMSB);// Record the previous value of the BitRate MSB
+   	volatile int bitRateLsb = radio.readReg(REG_BITRATELSB);// Record the previous value of the BitRate LSB
    	// Set Modulation to OOK continuous mode without synchronisation
    	radio.writeReg(REG_DATAMODUL, RF_DATAMODUL_DATAMODE_CONTINUOUSNOBSYNC|RF_DATAMODUL_MODULATIONTYPE_OOK);	
    	// Set the Operation mode to transmit
@@ -331,8 +343,10 @@ void RFM69OOK::ookOldKakuRfmPulse(int on, int off)
     }
   delay (_repDly);
   } 
-   	radio.writeReg(REG_OPMODE,mode);                    // Restore previous OPMODE
-  	radio.writeReg(REG_DATAMODUL,modulation);           // Restore pervious MODULATION    
+   	radio.writeReg(REG_OPMODE,mode);                    			// Restore previous OPMODE
+  	radio.writeReg(REG_DATAMODUL,modulation);           			// Restore previous MODULATION    
+  	radio.writeReg(REG_BITRATEMSB, bitRateMsb);			            // Restore previous BIT RATE value
+  	radio.writeReg(REG_BITRATELSB, bitRateLsb);			            // Restore previous BIT RATE value 
  }
 /************************************************ ookCogexRfmPulse *****************************************************
 * Function:  	KAKU Cogex pulse switching function with RFM69

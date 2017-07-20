@@ -27,12 +27,13 @@ This library makes reference to RFM69(H)W_OOK_Library_Vx.y.pdf
 
 extern boolean RFM69OOK_DEBUG; 		// Debug option defined by the 
 #define MAJOR 1						// Major version
-#define MINOR 2						// Minor version
+#define MINOR 3						// Minor version
 /**************************************** Revision History **************************************************************
 * 1.0 - First release
 * 1.1 - Correct ATMEGA2560 DIO2 pin from 19 to 18
 * 1.2 - Correction is made to the ookOldKakuRfmPulse and ookCogexRfmPulse function to cope with no 0 integer 
-*	    value calcutation chrsahing the ESP8266
+*	    value calcutation crash with the ESP8266
+* 1.3 - Save and restore of Bit rate MSB and LSB register while calling a OOK function 
 ************************************************************************************************************************/
 // RFM69 DIO2 pin should be connected on ATmega328 pin D3
 #if defined(__AVR_ATmega328P__) 
