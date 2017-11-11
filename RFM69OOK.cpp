@@ -22,11 +22,11 @@ This library makes reference to RFM69(H)W_OOK_Library_Vx.y.pdf
 *                                                      DESCRIPTION                                                      *
 *                                                                                                                       *
 /************************************************************************************************************************
-* Version:      1.3
-* Date:         16/11/2016
+* Version:      1.4
+* Date:         15/11/2017
 * Author:       Robert 
 * Description:  Library for OOK Kaku alike transmission using RFM69 transceivers
-* Compiler:     - Arduino Compiler 1.65
+* Compiler:     - Arduino Compiler 1.83
 * Hardware:     Tested with:
 *				- Moteino R4 and Moteino Mega with RFM69 DIO2 connection
 *				- Moteino Mega with RFM69 DIO2 connection
@@ -60,7 +60,8 @@ This library makes reference to RFM69(H)W_OOK_Library_Vx.y.pdf
 *												- Arduino Ethernet 				Pin 3 	using the RFM69(H)W Board
 *												- Arduino Leonardo				Pin 2	using the RFM69(H)W Board
 *												- ATMEGA 2560					Pin 18	using the RFM69(H)W Shield
-*												- Expressive ESP8266 (ESP-12)	Pin 16	using the RFM69(H)W Board		
+*												- Expressive ESP8266 (ESP-12)	Pin 16	using the RFM69(H)W Board
+*												- WeMos D1 mini and Pro 		Pin D2  using the RFM Shield Board		
 *					- OOK Symbol time is 300 us (good compromise between Kaku New, Old and Gogex)
 *					- Datagram Repeat delay is 20ms (looks to be an acceptable value for Gogex)
 *					- Number of repeated datagrams is 10
@@ -90,9 +91,9 @@ This library makes reference to RFM69(H)W_OOK_Library_Vx.y.pdf
 * 1.2 - Correction is made to the ookOldKakuRfmPulse and ookCogexRfmPulse function to cope with no 0 integer 
 *	    value calcutation crash with the ESP8266
 * 1.3 - Save and restore of Bit rate MSB and LSB register while calling a OOK function 
+* 1.4 - Add pre and post sending procedure for OOK frame sending
 ************************************************************************************************************************/
 #include "RFM69OOK.h"
-
 /****************************************************** RFM69OOK *******************************************************
 * Function:  	Define a RFM69OOK Class with default parameters
 * Parameters:	None
@@ -162,14 +163,7 @@ void RFM69OOK::setOokPin(uint8_t newOokDataPin)
 /***********************************************************************************************************************/
 void RFM69OOK::sendKakuNew(RFM69 &radio, unsigned long int addr, byte unit, boolean on, boolean group, byte dimLevel)
 {
-	volatile int mode = radio.readReg(REG_OPMODE);			// Record the previous Operation mode
-   	volatile int modulation = radio.readReg(REG_DATAMODUL); // Record the previous Modulation Mode
-   	volatile int bitRateMsb = radio.readReg(REG_BITRATEMSB);// Record the previous value of the BitRate MSB
-   	volatile int bitRateLsb = radio.readReg(REG_BITRATELSB);// Record the previous value of the BitRate LSB
-   	// Set Modulation to OOK continuous mode without synchronisation
-   	radio.writeReg(REG_DATAMODUL, RF_DATAMODUL_DATAMODE_CONTINUOUSNOBSYNC|RF_DATAMODUL_MODULATIONTYPE_OOK);	
-   	// Set the Operation mode to transmit
-	radio.writeReg(REG_OPMODE, RF_OPMODE_TRANSMITTER);
+    ookPreSend (radio);									// Prepare RFM69 registers and media for OOK sending
    	/* Form  the Command datagram:
    	Unit = (-1) From 0...15
    	Address = From 0...﻿67.108.864 shift left 6 positions
@@ -215,10 +209,7 @@ void RFM69OOK::sendKakuNew(RFM69 &radio, unsigned long int addr, byte unit, bool
      ookNewKakuRfmPulse(0, _periodusec*10);           	// Stop bit
      delay (_repDly);                                 	// Wait some delay between reties 
 	}  
-   	radio.writeReg(REG_OPMODE,mode);                    			// Restore previous OPMODE
-  	radio.writeReg(REG_DATAMODUL,modulation);           			// Restore previous MODULATION    
-  	radio.writeReg(REG_BITRATEMSB, bitRateMsb);			            // Restore previous BIT RATE value
-  	radio.writeReg(REG_BITRATELSB, bitRateLsb);			            // Restore previous BIT RATE value                                                                
+    ookPostSend (radio);								// Restore RFM69 registers aftrer OOK sending                                                            
 }
  
 /*************************************************** ookNewKakuRfmPulse ************************************************
@@ -252,15 +243,8 @@ void RFM69OOK::ookNewKakuRfmPulse(int l1, int l2)
 /***********************************************************************************************************************/
  void RFM69OOK::sendKakuOld(RFM69 &radio, char addr, byte unit, byte on)
  {
-	volatile int mode = radio.readReg(REG_OPMODE);			// Record the previous Operation mode
-   	volatile int modulation = radio.readReg(REG_DATAMODUL); // Record the previous Modulation Mode
-   	volatile int bitRateMsb = radio.readReg(REG_BITRATEMSB);// Record the previous value of the BitRate MSB
-   	volatile int bitRateLsb = radio.readReg(REG_BITRATELSB);// Record the previous value of the BitRate LSB
-   	// Set Modulation to OOK continuous mode without synchronisation
-   	radio.writeReg(REG_DATAMODUL, RF_DATAMODUL_DATAMODE_CONTINUOUSNOBSYNC|RF_DATAMODUL_MODULATIONTYPE_OOK);	
-   	// Set the Operation mode to transmit
-	radio.writeReg(REG_OPMODE, RF_OPMODE_TRANSMITTER);
-  	 /* Form  the Command datagram:
+    ookPreSend (radio);												// Prepare RFM69 registers and media for OOK sending
+  	/* Form  the Command datagram:
    	Fixed float Bits = x11xxxxxxxxx (0x600) 
    	Unit = (-1) From 0...15 shift 4 bits left
    	Address = ASCII -1 to Binary (ex: 'D' = 68-65 = 3) 
@@ -279,10 +263,7 @@ void RFM69OOK::ookNewKakuRfmPulse(int l1, int l2)
     }
   	delay (_repDly);
   } 
-   	radio.writeReg(REG_OPMODE,mode);                    			// Restore previous OPMODE
-  	radio.writeReg(REG_DATAMODUL,modulation);           			// Restore previous MODULATION    
-  	radio.writeReg(REG_BITRATEMSB, bitRateMsb);			            // Restore previous BIT RATE value
-  	radio.writeReg(REG_BITRATELSB, bitRateLsb);			            // Restore previous BIT RATE value
+  ookPostSend (radio);												// Restore RFM69 registers aftrer OOK sending
   	                                                               
 }
 /************************************************ ookOldKakuRfmPulse ***************************************************
@@ -315,14 +296,7 @@ void RFM69OOK::ookOldKakuRfmPulse(int on, int off)
 /***********************************************************************************************************************/
  void RFM69OOK::sendKakuCogex(RFM69 &radio, byte addr, byte unit, byte on)
  {
-	volatile int mode = radio.readReg(REG_OPMODE);			// Record the previous Operation mode
-   	volatile int modulation = radio.readReg(REG_DATAMODUL); // Record the previous Modulation Mode
-   	volatile int bitRateMsb = radio.readReg(REG_BITRATEMSB);// Record the previous value of the BitRate MSB
-   	volatile int bitRateLsb = radio.readReg(REG_BITRATELSB);// Record the previous value of the BitRate LSB
-   	// Set Modulation to OOK continuous mode without synchronisation
-   	radio.writeReg(REG_DATAMODUL, RF_DATAMODUL_DATAMODE_CONTINUOUSNOBSYNC|RF_DATAMODUL_MODULATIONTYPE_OOK);	
-   	// Set the Operation mode to transmit
-	radio.writeReg(REG_OPMODE, RF_OPMODE_TRANSMITTER);
+    ookPreSend (radio);												// Prepare RFM69 registers and media for OOK sending
     /* Form  the Command datagram:
     Fixed float Bits = x11xxxxxxxxx (0x600) 
     Unit = From 1 to 15; shift 5 bits left
@@ -343,10 +317,7 @@ void RFM69OOK::ookOldKakuRfmPulse(int on, int off)
     }
   delay (_repDly);
   } 
-   	radio.writeReg(REG_OPMODE,mode);                    			// Restore previous OPMODE
-  	radio.writeReg(REG_DATAMODUL,modulation);           			// Restore previous MODULATION    
-  	radio.writeReg(REG_BITRATEMSB, bitRateMsb);			            // Restore previous BIT RATE value
-  	radio.writeReg(REG_BITRATELSB, bitRateLsb);			            // Restore previous BIT RATE value 
+  ookPostSend (radio);												// Restore RFM69 registers aftrer OOK sending
  }
 /************************************************ ookCogexRfmPulse *****************************************************
 * Function:  	KAKU Cogex pulse switching function with RFM69
@@ -389,4 +360,29 @@ void RFM69OOK::ookOldKakuRfmPulse(int on, int off)
 }
 /***********************************************************************************************************************/
 
-
+/***************************************************** ookPreSend ******************************************************
+* Function:  	Save and configure RFM registers for OOK tramission and wait for clear media before sending a OOK frame
+* Parameters: 	RFM69 radio instance
+/***********************************************************************************************************************/
+ void RFM69OOK::ookPreSend (RFM69 &radio)
+{
+    radio.writeReg(REG_PACKETCONFIG2, (radio.readReg(REG_PACKETCONFIG2) & 0xFB) | RF_PACKET2_RXRESTART); // avoid RX deadlocks
+    uint32_t now = millis();
+    while (!radio.canSend() && millis() - now < RF69_CSMA_LIMIT_MS) radio.receiveDone();
+	_mode = radio.readReg(REG_OPMODE);			// Record the previous Operation mode
+   	_modulation = radio.readReg(REG_DATAMODUL); // Record the previous Modulation Mode
+  	_bitRateMsb = radio.readReg(REG_BITRATEMSB);// Record the previous value of the BitRate MSB
+   	_bitRateLsb = radio.readReg(REG_BITRATELSB);// Record the previous value of the BitRate LSB
+   	// Set Modulation to OOK continuous mode without synchronisation
+   	radio.writeReg(REG_DATAMODUL, RF_DATAMODUL_DATAMODE_CONTINUOUSNOBSYNC|RF_DATAMODUL_MODULATIONTYPE_OOK);	
+   	// Set the Operation mode to transmit
+	radio.writeReg(REG_OPMODE, RF_OPMODE_TRANSMITTER);
+}
+/***********************************************************************************************************************/
+void RFM69OOK::ookPostSend(RFM69 &radio)
+ { 
+   	radio.writeReg(REG_OPMODE,_mode);                    			// Restore previous OPMODE
+  	radio.writeReg(REG_DATAMODUL,_modulation);           			// Restore previous MODULATION    
+  	radio.writeReg(REG_BITRATEMSB,_bitRateMsb);			            // Restore previous BIT RATE value
+  	radio.writeReg(REG_BITRATELSB,_bitRateLsb);			            // Restore previous BIT RATE value 
+ }

@@ -27,13 +27,14 @@ This library makes reference to RFM69(H)W_OOK_Library_Vx.y.pdf
 
 extern boolean RFM69OOK_DEBUG; 		// Debug option defined by the 
 #define MAJOR 1						// Major version
-#define MINOR 3						// Minor version
+#define MINOR 4						// Minor version
 /**************************************** Revision History **************************************************************
 * 1.0 - First release
 * 1.1 - Correct ATMEGA2560 DIO2 pin from 19 to 18
 * 1.2 - Correction is made to the ookOldKakuRfmPulse and ookCogexRfmPulse function to cope with no 0 integer 
 *	    value calcutation crash with the ESP8266
 * 1.3 - Save and restore of Bit rate MSB and LSB register while calling a OOK function 
+* 1.4 - Add pre and post sending procedure for OOK frame sending
 ************************************************************************************************************************/
 // RFM69 DIO2 pin should be connected on ATmega328 pin D3
 #if defined(__AVR_ATmega328P__) 
@@ -49,7 +50,7 @@ extern boolean RFM69OOK_DEBUG; 		// Debug option defined by the
 	#define RF69_OOK_PIN          2
 // Default value enabling the change with the setOokPin function
 #else 
-#define RF69_OOK_PIN          3
+    #define RF69_OOK_PIN          3
 #endif
 
 class RFM69OOK {
@@ -73,6 +74,10 @@ private:
 	byte _repeats;							// Number of time a datagram is to be repeated
 	byte _repDly;							// Delay between repeated datagrams
 	unsigned int _periodusec;				// OOK pulse time for OOK SAW devices	
+ 	int _mode;								// Used to record the previous Operation mode
+	int _modulation; 						// Used to record the previous Modulation Mode
+	int _bitRateMsb; 						// Used to record the previous value of the BitRate MSB
+ 	int _bitRateLsb;						// Used to record the previous value of the BitRate LSB
 	// New Kaku datagram output to RFM69 
     void ookNewKakuRfmPulse(int l1, int l2);
    	// Old Kaku datagram output to RFM69 
@@ -81,5 +86,9 @@ private:
     void ookCogexRfmPulse(int on, int off);
     // Print OOK settings informations
 	void printOokInfos (unsigned long int addr, unsigned long int unit, boolean on, boolean group, byte dimLevel, int cmd);
+	// Prepare RFM69 registers and media before sending an OOK frame
+	void ookPreSend (RFM69 &radio);
+	// Restore RFM69 register after sending an OOK frame
+	void ookPostSend (RFM69 &radio);
 };
 #endif
