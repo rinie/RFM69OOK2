@@ -1,0 +1,15 @@
+{
+    "name": "rfm69OOKl",
+    "keywords": "rfm69OOK, 433MHz, 434MHz, rf",
+    "description": "rfm69OOK 433.92 MHz protocols library for Arduino. It is developed and tested on ESP32.",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/rinie/RFM69OOK2.git"
+    },
+    "version": "0.3.2",
+    "license": "GPL-3.0",
+    "frameworks": "arduino",
+    "platforms": [
+        "espressif32"
+    ]
+}
